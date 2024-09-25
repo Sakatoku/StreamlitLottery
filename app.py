@@ -175,10 +175,6 @@ elif scene == "result":
         st.snow()
     st.write('🎉おめでとうございます🎉')
 
-    # 抽選ボタン
-    if st.button('もう一回抽選する'):
-        set_current_scene("lottery")
-        st.rerun()
     # 初期化ボタン
     if st.button('最初の画面に戻る'):
         set_current_scene("waiting")
