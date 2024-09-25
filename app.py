@@ -171,8 +171,19 @@ scene = get_current_scene()
 
 # 抽選待ち画面
 if scene == "waiting":
+    # 説明文を表示
+    forum_url = "https://discuss.streamlit.io/"
+    st.markdown(f"""
+    PyCon JP の Streamlit ブースに遊びに来ていただきありがとうございます！  
+    Streamlit Forum にユーザ登録していただいた方に、抽選で **オリジナルバックパック** もしくは **オリジナル靴下** をその場でプレゼントします！  
+
+    Streamlit Forum にログインした画面を見せてから、以下のボタンを押して抽選にエントリーしてください。
+    もし、まだユーザ登録していない方は、[こちら]({forum_url})からユーザ登録することができます。  
+    また、抽選は1人1回とさせていただいています。  
+    """)
+
     # 抽選ボタン
-    if st.button('抽選する'):
+    if st.button('さっそく抽選にエントリーする'):
         if not is_duplicate_lot():
             set_current_scene("lottery")
             st.rerun()
