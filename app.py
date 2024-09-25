@@ -141,6 +141,31 @@ def get_lottery_result():
 def set_lottery_result(lottery_result):
     st.session_state.lottery_result = lottery_result
 
+# 多重抽選チェック
+def is_duplicate_lot():
+    is_duplicate = False
+
+    # 同じ画面で抽選できるようになるまでのクールタイム
+    lot_cooltime = 40
+
+    # セッションステートに抽選時刻があるか確認
+    if "lot_time" in st.session_state:
+        # 現在時刻を取得
+        now = time.time()
+        # 抽選時刻を取得
+        lot_time = st.session_state.lot_time
+        # 抽選時刻からの差を取得
+        time_diff = now - lot_time
+        # 差がlot_cooltime秒未満の場合は多重抽選とする
+        if time_diff < lot_cooltime:
+            is_duplicate = True
+
+    # チェックを通過した場合は抽選時刻を更新
+    if not is_duplicate:
+        st.session_state.lot_time = time.time()
+
+    return is_duplicate
+
 # セッションステートの取得
 scene = get_current_scene()
 
@@ -148,8 +173,11 @@ scene = get_current_scene()
 if scene == "waiting":
     # 抽選ボタン
     if st.button('抽選する'):
-        set_current_scene("lottery")
-        st.rerun()
+        if not is_duplicate_lot():
+            set_current_scene("lottery")
+            st.rerun()
+        else:
+            st.error("申し訳ありません。抽選は1人1回です。")
 
 # 抽選中画面
 elif scene == "lottery":
@@ -173,7 +201,11 @@ elif scene == "result":
     elif result == "backpack":
         st.image(get_image_resource("backpack"), use_column_width=True)
         st.snow()
-    st.write('🎉おめでとうございます🎉')
+    st.write("🎉おめでとうございます🎉")
+    # 現在時刻を取得
+    now = time.localtime()
+    formatted_now = time.strftime("%Y/%m/%d %H:%M:%S", now)
+    st.write(f"この画面を係員にお見せください。 ({formatted_now})")
 
     # 初期化ボタン
     if st.button('最初の画面に戻る'):
