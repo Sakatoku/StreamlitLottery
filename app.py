@@ -1,6 +1,7 @@
 import streamlit as st
 import mysql.connector
 import time
+import datetime
 import random
 
 # ページコンフィグ
@@ -214,8 +215,9 @@ elif scene == "result":
         st.snow()
     st.write("🎉おめでとうございます🎉")
     # 現在時刻を取得
-    now = time.localtime()
-    formatted_now = time.strftime("%Y/%m/%d %H:%M:%S", now)
+    tz_jst = datetime.timezone(datetime.timedelta(hours=9), 'JST')
+    now = datetime.datetime.now(tz=tz_jst)
+    formatted_now = now.strftime("%Y/%m/%d %H:%M:%S")
     st.write(f"この画面を係員にお見せください。 ({formatted_now})")
 
     # 初期化ボタン
