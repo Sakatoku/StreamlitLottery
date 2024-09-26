@@ -77,7 +77,7 @@ def lottery():
         lot_buffer[item[1]] = [start_value, end_value, item[0], item[2]]
         start_value = end_value
     # デバッグ表示
-    st.write(lot_buffer)
+    # st.write(lot_buffer)
 
     # randomで抽選
     if end_value > 0:
@@ -91,7 +91,7 @@ def lottery():
             result_item = key
             break
     # デバッグ表示
-    st.write(f"抽選結果: {result_item} ({random_value})")
+    # st.write(f"抽選結果: {result_item} ({random_value})")
 
     # 抽選結果をitemsテーブルに反映
     cursor.execute(f"UPDATE items SET item_stock = item_stock - 1 WHERE item_name = \"{result_item}\";")
