@@ -13,7 +13,7 @@ st.set_page_config(
 st.title('🎒Streamlit Forumへようこそ🎒')
 
 # Connect to TiDB
-@st.cache_resource(ttl=1200)
+@st.cache_resource(ttl=60)
 def connect_to_tidb(autocommit=True):
     connection = mysql.connector.connect(
         host = st.secrets.tidb.host,
