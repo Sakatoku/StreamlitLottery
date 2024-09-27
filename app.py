@@ -13,7 +13,7 @@ st.set_page_config(
 st.title('🎒Streamlit Forumへようこそ🎒')
 
 # Connect to TiDB
-@st.cache_resource(ttl=600)
+@st.cache_resource(ttl=1200)
 def connect_to_tidb(autocommit=True):
     connection = mysql.connector.connect(
         host = st.secrets.tidb.host,
@@ -53,67 +53,75 @@ def lottery():
     # 6. トランザクションコミット
     # 7. 抽選結果をセット
 
-    # TiDBに接続
-    connection = connect_to_tidb()
-    cursor = connection.cursor()
+    # 抽選結果の初期値
+    random_value = 0
+    result_item = "socks"
 
     # 所要時間を計測開始
     start_time = time.time()
 
-    # トランザクション開始
-    cursor.execute("START TRANSACTION;")
+    try:
+        # TiDBに接続
+        connection = connect_to_tidb()
+        cursor = connection.cursor()
 
-    # itemsテーブルから各アイテムのitem_stockを取得
-    cursor.execute("SELECT * FROM items FOR UPDATE;")
-    items = cursor.fetchall()
+        # トランザクション開始
+        cursor.execute("START TRANSACTION;")
 
-    # 取得したitem_stockから抽選テーブルを作成
-    lot_buffer = dict()
-    start_value = 0
-    end_value = 0
-    for item in items:
-        if item[2] <= 0:
-            continue
-        end_value = start_value + item[2]
-        lot_buffer[item[1]] = [start_value, end_value, item[0], item[2]]
-        start_value = end_value
-    # デバッグ表示
-    # st.write(lot_buffer)
+        try:
+            # itemsテーブルから各アイテムのitem_stockを取得
+            cursor.execute("SELECT * FROM items FOR UPDATE;")
+            items = cursor.fetchall()
 
-    # randomで抽選
-    if end_value > 0:
-        random_value = random.randrange(0, end_value)
-    else:
-        # item_stockが0以下の場合は抽選しない
-        random_value = 0
-    result_item = "socks"
-    for key, value in lot_buffer.items():
-        if value[0] <= random_value < value[1]:
-            result_item = key
-            break
-    # デバッグ表示
-    # st.write(f"抽選結果: {result_item} ({random_value})")
+            # 取得したitem_stockから抽選テーブルを作成
+            lot_buffer = dict()
+            start_value = 0
+            end_value = 0
+            for item in items:
+                if item[2] <= 0:
+                    continue
+                end_value = start_value + item[2]
+                lot_buffer[item[1]] = [start_value, end_value, item[0], item[2]]
+                start_value = end_value
+            # デバッグ表示
+            # st.write(lot_buffer)
 
-    # 抽選結果をitemsテーブルに反映
-    cursor.execute(f"UPDATE items SET item_stock = item_stock - 1 WHERE item_name = \"{result_item}\";")
+            # item_stockが0より大きいときはrandomで抽選
+            if end_value > 0:
+                random_value = random.randrange(0, end_value)
+            for key, value in lot_buffer.items():
+                if value[0] <= random_value < value[1]:
+                    result_item = key
+                    break
+            # デバッグ表示
+            # st.write(f"抽選結果: {result_item} ({random_value})")
 
-    # トランザクションコミット
-    cursor.execute("COMMIT;")
+            # 抽選結果をitemsテーブルに反映
+            cursor.execute(f"UPDATE items SET item_stock = item_stock - 1 WHERE item_name = \"{result_item}\";")
 
-    # 抽選結果をセット
-    set_lottery_result(result_item)
+            # トランザクションコミット
+            cursor.execute("COMMIT;")
+        except Exception as e:
+            # トランザクションロールバック
+            cursor.execute("ROLLBACK;")
+            raise e
 
-    # ログを出力
-    if result_item in lot_buffer:
-        item_key = lot_buffer[result_item][2]
-        item_stock_before = lot_buffer[result_item][3]
-        item_stock_after = item_stock_before - 1
-    else:
-        # item_stockが0以下で抽選しなかった場合のログ
-        item_key = -1
-        item_stock_before = 0
-        item_stock_after = -1
-    cursor.execute(f"INSERT INTO lot_logs (lot_time, item_key, item_stock_before, item_stock_after) VALUES (NOW(), {item_key}, {item_stock_before}, {item_stock_after});")
+        # 抽選結果をセット
+        set_lottery_result(result_item)
+
+        # ログを出力
+        if result_item in lot_buffer:
+            item_key = lot_buffer[result_item][2]
+            item_stock_before = lot_buffer[result_item][3]
+            item_stock_after = item_stock_before - 1
+        else:
+            # item_stockが0以下で抽選しなかった場合のログ
+            item_key = -1
+            item_stock_before = 0
+            item_stock_after = -1
+        cursor.execute(f"INSERT INTO lot_logs (lot_time, item_key, item_stock_before, item_stock_after) VALUES (NOW(), {item_key}, {item_stock_before}, {item_stock_after});")
+    except Exception as e:
+        print(e)
 
     # 所要時間を計測終了
     end_time = time.time()
